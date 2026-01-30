@@ -1,4 +1,4 @@
-package com.base.demo.constants.enums.user;
+package com.base.demo.constants.enums.identity;
 
 import com.base.demo.constants.enums.PersistableEnum;
 import jakarta.persistence.AttributeConverter;

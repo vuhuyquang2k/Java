@@ -1,7 +1,7 @@
 package com.base.demo.entities;
 
-import com.base.demo.constants.enums.user.UserEmailStatus;
-import com.base.demo.constants.enums.user.UserProvider;
+import com.base.demo.constants.enums.identity.UserEmailStatus;
+import com.base.demo.constants.enums.identity.UserProvider;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

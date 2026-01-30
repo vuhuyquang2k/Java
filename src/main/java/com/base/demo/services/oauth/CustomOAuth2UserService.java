@@ -1,7 +1,7 @@
 package com.base.demo.services.oauth;
 
-import com.base.demo.constants.enums.user.UserEmailStatus;
-import com.base.demo.constants.enums.user.UserProvider;
+import com.base.demo.constants.enums.identity.UserEmailStatus;
+import com.base.demo.constants.enums.identity.UserProvider;
 import com.base.demo.constants.enums.user.UserStatus;
 import com.base.demo.entities.User;
 import com.base.demo.entities.UserIdentity;
