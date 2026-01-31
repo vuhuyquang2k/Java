@@ -14,4 +14,5 @@ CREATE TABLE user_identities (
     CONSTRAINT fk_user_identity_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT uq_one_identity_per_user UNIQUE (user_id),
     CONSTRAINT uq_provider_uid UNIQUE (provider, provider_user_id)
-) COMMENT = 'Bảng liên kết user với các nhà cung cấp OAuth';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT = 'Bảng liên kết user với các nhà cung cấp OAuth';

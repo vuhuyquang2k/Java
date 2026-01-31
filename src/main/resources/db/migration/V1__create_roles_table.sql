@@ -7,4 +7,5 @@ CREATE TABLE roles (
     description VARCHAR(255) COMMENT 'Mô tả chi tiết vai trò',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Thời gian cập nhật cuối'
-) COMMENT = 'Bảng lưu trữ các vai trò trong hệ thống';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT = 'Bảng lưu trữ các vai trò trong hệ thống';

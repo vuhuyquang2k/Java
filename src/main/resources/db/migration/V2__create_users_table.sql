@@ -7,4 +7,5 @@ CREATE TABLE users (
     status INT NOT NULL DEFAULT 1 COMMENT 'Trạng thái: 1=ACTIVE, 0=SUSPENDED',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo tài khoản',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Thời gian cập nhật cuối'
-) COMMENT = 'Bảng lưu trữ thông tin người dùng';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT = 'Bảng lưu trữ thông tin người dùng';
