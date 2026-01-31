@@ -39,3 +39,6 @@ out/
 ### Environment Variables ###
 .env
 
+
+# Secrets
+k8s/oauth-secret.yaml
