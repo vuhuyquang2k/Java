@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+  namespace: ewallet
+  labels:
+    app: java-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+    spec:
+      containers:
+        - name: java-app
+          image: ewalletacr2026.azurecr.io/ewallet-app:v1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:3306/base_project_db?useSSL=false&allowPublicKeyRetrieval=true"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: SPRING_REDIS_HOST
+              value: "redis"
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-app
+  namespace: ewallet
+spec:
+  selector:
+    app: java-app
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: LoadBalancer

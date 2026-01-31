@@ -1,0 +1,23 @@
+# Build files
+build/
+!build/libs/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Gradle
+.gradle/
+
+# Environment
+.env
+*.env
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

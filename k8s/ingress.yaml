@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ewallet-ingress
+  namespace: ewallet
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ewallet.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: java-app
+                port:
+                  number: 8080
+          - path: /vault
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200

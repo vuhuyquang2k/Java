@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ewallet
+data:
+  MYSQL_DATABASE: "base_project_db"
+  MYSQL_HOST: "mysql"
+  MYSQL_PORT: "3306"
