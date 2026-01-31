@@ -4,24 +4,22 @@ metadata:
   name: ewallet-ingress
   namespace: ewallet
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - shopacc.pro.vn
+    secretName: shopacc-tls
   rules:
-    - host: ewallet.local
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: java-app
-                port:
-                  number: 8080
-          - path: /vault
-            pathType: Prefix
-            backend:
-              service:
-                name: vault
-                port:
-                  number: 8200
+  - host: shopacc.pro.vn
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: java-app
+            port:
+              number: 80
