@@ -14,3 +14,7 @@ daemonset:
 
       output.elasticsearch:
         hosts: ["elasticsearch-master:9200"]
+        protocol: "https"
+        username: "elastic"
+        password: "iyQJz6g9hz1cQ2ic"
+        ssl.verification_mode: "none"
