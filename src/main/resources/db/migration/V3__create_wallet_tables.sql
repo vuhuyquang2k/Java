@@ -5,7 +5,7 @@
 CREATE TABLE wallets (
     id              INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID ví',
     user_id         INT NOT NULL COMMENT 'ID user sở hữu ví',
-    balance         DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Số dư khả dụng (VND)',
+    balance         DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Tổng số dư (VND)',
     pending_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Số dư đang giữ (withdrawal pending)',
     status          INT NOT NULL DEFAULT 1 COMMENT '1=ACTIVE, 2=FROZEN, 3=CLOSED',
     version         INT NOT NULL DEFAULT 1 COMMENT 'Optimistic lock version',
