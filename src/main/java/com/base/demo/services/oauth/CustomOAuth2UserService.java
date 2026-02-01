@@ -50,9 +50,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         if (existingIdentity.isPresent()) {
             // Validate user vẫn tồn tại
             UserIdentity identity = existingIdentity.get();
-            boolean userExists = userRepository.existsById(identity.getUser().getId());
+            boolean userExists = userRepository.existsById(identity.getUserId());
             if (!userExists) {
-                log.error("User ID {} không tồn tại nhưng identity vẫn còn", identity.getUser().getId());
+                log.error("User ID {} không tồn tại nhưng identity vẫn còn", identity.getUserId());
                 throw new InternalServerException("Dữ liệu không nhất quán: vui lòng liên hệ hỗ trợ");
             }
         } else {
@@ -72,7 +72,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             Boolean emailVerified = oauth2User.getAttribute("email_verified");
 
             UserIdentity identity = new UserIdentity();
-            identity.setUser(newUser);
+            identity.setUserId(newUser.getId());
             identity.setProvider(UserProvider.GOOGLE);
             identity.setProviderUserId(providerUserId);
             identity.setEmail(email);

@@ -24,10 +24,9 @@ public class UserIdentity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     @NotNull
-    private User user;
+    private Integer userId;
 
     @Column(name = "provider", nullable = false)
     @NotNull
