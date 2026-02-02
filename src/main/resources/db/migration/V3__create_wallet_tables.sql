@@ -3,8 +3,8 @@
 -- ============================================================================
 
 CREATE TABLE wallets (
-    id              INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID ví',
-    user_id         INT NOT NULL COMMENT 'ID user sở hữu ví',
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID ví',
+    user_id         BIGINT NOT NULL COMMENT 'ID user sở hữu ví',
     balance         DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Tổng số dư (VND)',
     pending_balance DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Số dư đang giữ (withdrawal pending)',
     status          INT NOT NULL DEFAULT 1 COMMENT '1=ACTIVE, 2=FROZEN, 3=CLOSED',
@@ -20,8 +20,8 @@ CREATE TABLE wallets (
 
 CREATE TABLE wallet_transactions (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID giao dịch',
-    wallet_id        INT NOT NULL COMMENT 'ID ví thực hiện giao dịch',
-    transaction_type INT NOT NULL COMMENT '1=DEPOSIT, 2=PURCHASE, 3=WITHDRAWAL, 4=REFUND, 5=HOLD, 6=RELEASE',
+    wallet_id        BIGINT NOT NULL COMMENT 'ID ví thực hiện giao dịch',
+    transaction_type INT NOT NULL COMMENT '1=DEPOSIT, 2=WITHDRAWAL, 3=PURCHASE, 4=REFUND, 5=HOLD, 6=RELEASE',
     direction        INT NOT NULL COMMENT '1=CREDIT (vào ví), 2=DEBIT (ra khỏi ví)',
     amount           DECIMAL(15,2) NOT NULL COMMENT 'Số tiền giao dịch (luôn dương)',
     balance_before   DECIMAL(15,2) NOT NULL COMMENT 'Số dư trước giao dịch',
@@ -44,7 +44,7 @@ CREATE TABLE wallet_transactions (
 
 CREATE TABLE deposit_requests (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID yêu cầu nạp tiền',
-    user_id             INT NOT NULL COMMENT 'ID user yêu cầu nạp',
+    user_id             BIGINT NOT NULL COMMENT 'ID user yêu cầu nạp',
     amount              DECIMAL(15,2) NOT NULL COMMENT 'Số tiền yêu cầu nạp',
     transfer_reference  VARCHAR(100) COMMENT 'Mã/nội dung chuyển khoản từ user',
     bank_transaction_id VARCHAR(100) COMMENT 'Mã GD ngân hàng - admin nhập khi duyệt',
@@ -54,7 +54,7 @@ CREATE TABLE deposit_requests (
     user_agent          VARCHAR(500) COMMENT 'Browser/app user agent',
     admin_note          VARCHAR(500) COMMENT 'Ghi chú của admin',
     reject_reason       VARCHAR(255) COMMENT 'Lý do từ chối - bắt buộc khi reject',
-    processed_by        INT COMMENT 'ID admin xử lý',
+    processed_by        BIGINT COMMENT 'ID admin xử lý',
     processed_at        TIMESTAMP NULL COMMENT 'Thời điểm xử lý',
     expires_at          TIMESTAMP NULL COMMENT 'Thời điểm hết hạn - auto cancel nếu quá',
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm tạo yêu cầu',
@@ -72,7 +72,7 @@ CREATE TABLE deposit_requests (
 
 CREATE TABLE withdrawal_requests (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID yêu cầu rút tiền',
-    user_id             INT NOT NULL COMMENT 'ID user yêu cầu rút',
+    user_id             BIGINT NOT NULL COMMENT 'ID user yêu cầu rút',
     amount              DECIMAL(15,2) NOT NULL COMMENT 'Số tiền yêu cầu rút',
     fee                 DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Phí rút tiền (nếu có)',
     net_amount          DECIMAL(15,2) GENERATED ALWAYS AS (amount - fee) STORED COMMENT 'Số tiền thực nhận = amount - fee',
@@ -87,7 +87,7 @@ CREATE TABLE withdrawal_requests (
     user_agent          VARCHAR(500) COMMENT 'Browser/app user agent',
     admin_note          VARCHAR(500) COMMENT 'Ghi chú của admin',
     reject_reason       VARCHAR(255) COMMENT 'Lý do từ chối/thất bại',
-    processed_by        INT COMMENT 'ID admin xử lý',
+    processed_by        BIGINT COMMENT 'ID admin xử lý',
     processed_at        TIMESTAMP NULL COMMENT 'Thời điểm xử lý',
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm tạo yêu cầu',
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Thời điểm cập nhật',

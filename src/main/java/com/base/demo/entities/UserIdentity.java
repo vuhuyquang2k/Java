@@ -22,11 +22,11 @@ public class UserIdentity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "user_id", nullable = false)
     @NotNull
-    private Integer userId;
+    private Long userId;
 
     @Column(name = "provider", nullable = false)
     @NotNull

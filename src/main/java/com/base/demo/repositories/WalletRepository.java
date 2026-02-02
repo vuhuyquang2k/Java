@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface WalletRepository extends JpaRepository<Wallet, Integer> {
-    boolean existsByUserId(Integer userId);
-    Wallet findByUserId(Integer userId);
+public interface WalletRepository extends JpaRepository<Wallet, Long> {
+    boolean existsByUserId(Long userId);
+
+    Wallet findByUserId(Long userId);
 }

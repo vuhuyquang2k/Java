@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class GetWalletResponse {
-    private Integer userId;
+    private Long userId;
     private BigDecimal balance;
     private BigDecimal availableBalance;
     private BigDecimal pendingBalance;

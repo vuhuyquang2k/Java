@@ -67,12 +67,11 @@ public class WalletServiceImpl implements WalletService {
                     return new UnauthorizedException("Tài khoản chưa được đăng ký");
                 });
 
-
         Wallet wallet = walletRepository.findByUserId(identity.getUserId());
 
         if (wallet == null) {
             log.warn("Không tìm thấy ví cho user ID: {}", identity.getUserId());
-            throw new ResourceNotFoundException("Wallet", "userId", identity.getUserId( ));
+            throw new ResourceNotFoundException("Wallet", "userId", identity.getUserId());
         }
 
         GetWalletResponse walletResponse = new GetWalletResponse();

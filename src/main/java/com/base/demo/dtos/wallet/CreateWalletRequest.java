@@ -18,14 +18,18 @@ import java.math.BigDecimal;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class CreateWalletRequest {
 
-    @NotNull
-    private Integer userId;
+    @NotNull(message = "User ID không được để trống")
+    private Long userId;
 
+    @Builder.Default
     private BigDecimal balance = new BigDecimal("0.00");
 
+    @Builder.Default
     private BigDecimal pendingBalance = new BigDecimal("0.00");
 
+    @Builder.Default
     private WalletStatus status = WalletStatus.ACTIVE;
 
+    @Builder.Default
     private Integer version = 1;
 }
