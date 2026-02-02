@@ -98,8 +98,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 log.info("Đã tạo tài khoản mới cho user: {} ({})", name, email);
 
                 // Tạo ví cho user
-                CreateWalletRequest request = new CreateWalletRequest();
-                request.setUserId(newUser.getId());
+                CreateWalletRequest request = CreateWalletRequest.builder()
+                        .userId(newUser.getId())
+                        .build();
                 walletService.createWallet(request);
             }
 
