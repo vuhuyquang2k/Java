@@ -4,6 +4,8 @@ import com.base.demo.dtos.role.CreateRoleRequest;
 import com.base.demo.dtos.role.GetRoleResponse;
 import com.base.demo.dtos.role.UpdateRoleRequest;
 import com.base.demo.entities.Role;
+import com.base.demo.exceptions.ConflictException;
+import com.base.demo.exceptions.ResourceNotFoundException;
 import com.base.demo.repositories.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -27,14 +29,13 @@ public class RoleServiceImpl implements RoleService {
                 .id(r.getId())
                 .name(r.getName())
                 .description(r.getDescription())
-                .build()
-        ).toList();
+                .build()).toList();
     }
 
     @Override
     public void createRole(CreateRoleRequest request) {
         if (roleRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Role with name " + request.getName() + " already exists.");
+            throw new ConflictException("Role với tên '" + request.getName() + "' đã tồn tại");
         }
 
         Role role = new Role();
@@ -46,11 +47,11 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void updateRole(Integer id, UpdateRoleRequest request) {
         Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Role with id " + id + " not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "id", id));
 
         if (request.getName() != null && !request.getName().equals(role.getName())) {
             if (roleRepository.existsByName(request.getName())) {
-                throw new IllegalArgumentException("Role with name " + request.getName() + " already exists.");
+                throw new ConflictException("Role với tên '" + request.getName() + "' đã tồn tại");
             }
 
             role.setName(request.getName());
@@ -66,11 +67,10 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void deleteRole(Integer id) {
         if (!roleRepository.existsById(id)) {
-            throw new IllegalArgumentException("Role with id " + id + " not found.");
+            throw new ResourceNotFoundException("Role", "id", id);
         }
 
         roleRepository.deleteById(id);
     }
-
 
 }
