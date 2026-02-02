@@ -9,7 +9,7 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum UserProvider implements PersistableEnum<Integer> {
-    GOOGLE(1, "GOOGLE");
+    GOOGLE(1, "Google");
 
     private final Integer value;
     private final String name;

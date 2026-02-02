@@ -9,8 +9,8 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum UserStatus implements PersistableEnum<Integer> {
-    ACTIVE(1, "ACTIVE"),
-    SUSPENDED(0, "SUSPENDED");
+    ACTIVE(1, "Hoạt động"),
+    SUSPENDED(0, "Bị khóa");
 
     private final Integer value;
     private final String name;

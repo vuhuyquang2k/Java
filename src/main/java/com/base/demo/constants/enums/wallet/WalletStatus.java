@@ -9,9 +9,9 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum WalletStatus implements PersistableEnum<Integer> {
-    ACTIVE(1, "ACTIVE"),
-    FROZEN(2, "FROZEN"),
-    CLOSE(3, "CLOSE");
+    ACTIVE(1, "Hoạt động"),
+    FROZEN(2, "Đóng băng"),
+    CLOSE(3, "Đóng");
 
     private final Integer value;
     private final String name;

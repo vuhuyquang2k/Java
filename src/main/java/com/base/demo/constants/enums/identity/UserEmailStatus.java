@@ -9,8 +9,8 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum UserEmailStatus implements PersistableEnum<Integer> {
-    VERIFIED(1, "VERIFIED"),
-    UNVERIFIED(0, "UNVERIFIED");
+    VERIFIED(1, "Đã xác thực"),
+    UNVERIFIED(0, "Chưa xác thực");
 
     private final Integer value;
     private final String name;
