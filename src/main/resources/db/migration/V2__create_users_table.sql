@@ -3,7 +3,7 @@
 -- ============================================================================
 
 CREATE TABLE users (
-    id         INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID user',
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID user',
     full_name  VARCHAR(100) NOT NULL COMMENT 'Họ và tên đầy đủ',
     status     INT NOT NULL DEFAULT 1 COMMENT '1=ACTIVE, 0=SUSPENDED',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo',
@@ -13,8 +13,8 @@ CREATE TABLE users (
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE user_identities (
-    id               INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID tự tăng',
-    user_id          INT NOT NULL COMMENT 'ID user liên kết',
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID tự tăng',
+    user_id          BIGINT NOT NULL COMMENT 'ID user liên kết',
     provider         INT NOT NULL COMMENT '1=GOOGLE, 2=FACEBOOK, 3=GITHUB',
     provider_user_id VARCHAR(255) NOT NULL COMMENT 'ID người dùng từ OAuth provider',
     email            VARCHAR(255) COMMENT 'Email từ OAuth provider',

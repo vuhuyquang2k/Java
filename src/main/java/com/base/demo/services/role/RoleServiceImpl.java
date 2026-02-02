@@ -45,7 +45,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void updateRole(Integer id, UpdateRoleRequest request) {
+    public void updateRole(Long id, UpdateRoleRequest request) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "id", id));
 
@@ -65,7 +65,7 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public void deleteRole(Integer id) {
+    public void deleteRole(Long id) {
         if (!roleRepository.existsById(id)) {
             throw new ResourceNotFoundException("Role", "id", id);
         }

@@ -2,7 +2,7 @@
 -- Bảng lưu trữ các vai trò trong hệ thống
 
 CREATE TABLE roles (
-    id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID tự tăng, khóa chính',
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID tự tăng, khóa chính',
     name VARCHAR(255) NOT NULL UNIQUE COMMENT 'Tên vai trò (unique)',
     description VARCHAR(255) COMMENT 'Mô tả chi tiết vai trò',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo',

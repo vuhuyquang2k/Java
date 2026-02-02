@@ -27,8 +27,7 @@ public class RoleController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-            ) {
+            @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(roleService.getRoles(name, description, page, size)));
     }
 
@@ -39,13 +38,14 @@ public class RoleController {
     }
 
     @PatchMapping("/{id}")
-    public  ResponseEntity<ApiResponse<Void>> updateRole(@PathVariable Integer id, @RequestBody @Valid UpdateRoleRequest request) {
+    public ResponseEntity<ApiResponse<Void>> updateRole(@PathVariable Long id,
+            @RequestBody @Valid UpdateRoleRequest request) {
         roleService.updateRole(id, request);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable Long id) {
         roleService.deleteRole(id);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
