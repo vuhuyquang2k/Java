@@ -21,15 +21,23 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_DATABASE
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:mysql://mysql:3306/base_project_db?useSSL=false&allowPublicKeyRetrieval=true"
+              value: "jdbc:mysql://mysql:3306/$(MYSQL_DATABASE)?useSSL=false&allowPublicKeyRetrieval=true"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "root"
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: mysql-secret
-                  key: MYSQL_ROOT_PASSWORD
+                  key: MYSQL_PASSWORD
             - name: SPRING_REDIS_HOST
               value: "redis"
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS

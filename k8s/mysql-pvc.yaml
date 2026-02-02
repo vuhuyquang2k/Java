@@ -1,0 +1,21 @@
+# =============================================================================
+# MySQL PersistentVolumeClaim - Persistent Storage for Database
+# =============================================================================
+# Uses Azure Disk (managed-csi) for durable storage
+# Data survives pod restarts and redeployments
+# =============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: ewallet
+  labels:
+    app: mysql
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: managed-csi  # Azure Disk CSI driver (default in AKS)
+  resources:
+    requests:
+      storage: 10Gi  # Adjust based on expected data size

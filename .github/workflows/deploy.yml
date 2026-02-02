@@ -51,13 +51,22 @@ jobs:
         resource-group: ${{ env.AKS_RESOURCE_GROUP }}
         cluster-name: ${{ env.AKS_CLUSTER_NAME }}
 
-    - name: Prepare Secret File
+    - name: Prepare Secret Files
       env:
+        # OAuth
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        # MySQL
+        MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+        MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+        MYSQL_USER: ${{ secrets.MYSQL_USER }}
+        MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       run: |
-        cp k8s/oauth-secret.yaml.example k8s/oauth-secret.yaml
+        # OAuth secrets
         envsubst < k8s/oauth-secret.yaml.example > k8s/oauth-secret.yaml
+        # MySQL secrets
+        envsubst < k8s/mysql-secret.yaml > k8s/mysql-secret-rendered.yaml
+        mv k8s/mysql-secret-rendered.yaml k8s/mysql-secret.yaml
 
     - name: Update Image Tag in Deployment
       run: |
