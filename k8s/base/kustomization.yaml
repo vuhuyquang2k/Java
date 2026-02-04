@@ -14,7 +14,6 @@ resources:
   - kafka/deployment.yaml
   - vault/deployment.yaml
   - ingress/main-ingress.yaml
-  - ingress/monitoring-ingress.yaml
 
 # Common labels applied to all resources
 labels:
