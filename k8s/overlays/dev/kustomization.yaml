@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ewallet
+
+resources:
+  - ../../base
+
+# Generate secrets from local .env.secrets file (gitignored)
+secretGenerator:
+  - name: app-secrets
+    envs:
+      - .env.secrets
+    options:
+      disableNameSuffixHash: true
+
+# Dev-specific patches
+patches:
+  - path: patches/resources.yaml
+
+# Labels for dev environment
+labels:
+  - pairs:
+      environment: dev

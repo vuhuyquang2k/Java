@@ -51,7 +51,7 @@ jobs:
         resource-group: ${{ env.AKS_RESOURCE_GROUP }}
         cluster-name: ${{ env.AKS_CLUSTER_NAME }}
 
-    - name: Prepare Secret Files
+    - name: Generate and Apply Secrets
       env:
         # OAuth
         GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -62,16 +62,13 @@ jobs:
         MYSQL_USER: ${{ secrets.MYSQL_USER }}
         MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
       run: |
-        # OAuth secrets
-        envsubst < k8s/oauth-secret.yaml.example > k8s/oauth-secret.yaml
-        # MySQL secrets
-        envsubst < k8s/mysql-secret.yaml > k8s/mysql-secret-rendered.yaml
-        mv k8s/mysql-secret-rendered.yaml k8s/mysql-secret.yaml
+        envsubst < k8s/overlays/prod/secrets.yaml.template > k8s/overlays/prod/secrets.yaml
+        kubectl apply -f k8s/overlays/prod/secrets.yaml
 
-    - name: Update Image Tag in Deployment
+    - name: Update Image Tag in Base Deployment
       run: |
-        sed -i "s|image: .*ewallet-app:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" k8s/java-deployment.yaml
+        sed -i "s|image: .*ewallet-app:.*|image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" k8s/base/app/deployment.yaml
 
-    - name: Deploy to AKS
+    - name: Deploy to AKS using Kustomize
       run: |
-        kubectl apply -f k8s/
+        kubectl apply -k k8s/overlays/prod/

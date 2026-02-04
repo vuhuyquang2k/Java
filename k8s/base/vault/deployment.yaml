@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vault
-  namespace: ewallet
   labels:
     app: vault
+    component: secrets-management
 spec:
   replicas: 1
   selector:
@@ -35,7 +35,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: vault
-  namespace: ewallet
+  labels:
+    app: vault
 spec:
   selector:
     app: vault

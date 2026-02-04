@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: java-app
-  namespace: ewallet
   labels:
     app: java-app
+    component: backend
 spec:
   replicas: 1
   selector:
@@ -17,48 +17,52 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: ewalletacr2026.azurecr.io/ewallet-app:v1
+          image: ewalletacr2026.azurecr.io/ewallet-app:latest
           ports:
             - containerPort: 8080
           env:
+            # Database
             - name: MYSQL_DATABASE
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
+                  name: app-secrets
                   key: MYSQL_DATABASE
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:mysql://mysql:3306/$(MYSQL_DATABASE)?useSSL=false&allowPublicKeyRetrieval=true"
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
+                  name: app-secrets
                   key: MYSQL_USER
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mysql-secret
+                  name: app-secrets
                   key: MYSQL_PASSWORD
+            # Redis
             - name: SPRING_REDIS_HOST
               value: "redis"
+            # Kafka
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka:9092"
+            # OAuth
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: oauth-secret
+                  name: app-secrets
                   key: GOOGLE_CLIENT_ID
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: oauth-secret
+                  name: app-secrets
                   key: GOOGLE_CLIENT_SECRET
           resources:
             requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
               memory: "512Mi"
               cpu: "250m"
-            limits:
-              memory: "1Gi"
-              cpu: "500m"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -71,16 +75,3 @@ spec:
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: java-app
-  namespace: ewallet
-spec:
-  selector:
-    app: java-app
-  ports:
-    - port: 80
-      targetPort: 8080
-  type: ClusterIP

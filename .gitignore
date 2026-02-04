@@ -39,6 +39,14 @@ out/
 ### Environment Variables ###
 .env
 
-
-# Secrets
+# ===========================================
+# Kubernetes Secrets (generated files)
+# ===========================================
+# Old format (deprecated)
 k8s/oauth-secret.yaml
+k8s/mysql-secret-rendered.yaml
+
+# Kustomize overlays secrets
+k8s/overlays/dev/.env.secrets
+k8s/overlays/prod/secrets.yaml
+
