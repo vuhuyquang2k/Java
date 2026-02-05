@@ -2,383 +2,217 @@ package com.base.demo.components;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
- * Redis Distributed Lock Component - Cung cấp cơ chế khóa phân tán sử dụng
- * Redis.
- * 
- * <p>
- * Component này implement distributed locking pattern để đảm bảo mutual
- * exclusion
- * trong môi trường distributed (nhiều instances, nhiều servers).
- * 
- * <h2>Đặc điểm chính:</h2>
- * <ul>
- * <li><b>Atomic Lock</b>: Sử dụng Redis SETNX (SET if Not Exists) để acquire
- * lock atomic</li>
- * <li><b>TTL Auto-expiry</b>: Lock tự động hết hạn để tránh deadlock khi
- * process crash</li>
- * <li><b>Safe Unlock</b>: Sử dụng Lua script để đảm bảo chỉ owner mới có thể
- * unlock</li>
- * <li><b>Retry with Backoff</b>: Hỗ trợ retry với exponential backoff khi lock
- * busy</li>
- * </ul>
- * 
- * <h2>Ví dụ sử dụng:</h2>
- * 
- * <pre>{@code
- * // Cách 1: Manual lock/unlock
- * String lockValue = redisLockComponent.tryLock("order:123", 30, TimeUnit.SECONDS);
- * if (lockValue != null) {
- *     try {
- *         // Critical section
- *     } finally {
- *         redisLockComponent.unlock("order:123", lockValue);
- *     }
- * }
- * 
- * // Cách 2: Auto-release với lambda (recommended)
- * redisLockComponent.executeWithLock("order:123", 30, 5, TimeUnit.SECONDS, () -> {
- *     // Critical section - lock sẽ tự động release khi hoàn thành hoặc exception
- *     return processOrder();
- * });
- * }</pre>
- * 
- * <h2>Lưu ý quan trọng:</h2>
- * <ul>
- * <li>Lock TTL nên lớn hơn thời gian xử lý dự kiến để tránh lock hết hạn giữa
- * chừng</li>
- * <li>Component này KHÔNG implement lock renewal (watch dog) - cân nhắc nếu
- * cần</li>
- * <li>Trong môi trường Redis Cluster, lock chỉ hoạt động trên single master
- * node</li>
- * </ul>
- * 
- * @see StringRedisTemplate
+ * Redis Distributed Lock - Sử dụng Redisson RLock.
+ * Features: Watch Dog auto-renewal, Fair Lock, Reentrant.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class RedisLockComponent {
 
-    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
-    /**
-     * Lua script để giải phóng lock một cách an toàn.
-     * 
-     * <p>
-     * Script này đảm bảo atomicity khi unlock:
-     * <ol>
-     * <li>Kiểm tra value hiện tại của lock có khớp với lockValue không</li>
-     * <li>Chỉ xóa lock nếu value khớp (đúng owner)</li>
-     * <li>Return 1 nếu unlock thành công, 0 nếu lock không thuộc về caller</li>
-     * </ol>
-     * 
-     * <p>
-     * Điều này ngăn chặn scenario nguy hiểm: Process A lock, chạy lâu, lock hết
-     * hạn,
-     * Process B acquire lock mới, Process A xong việc và xóa mất lock của Process
-     * B.
-     */
-    private static final String UNLOCK_SCRIPT = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
-            "   return redis.call('del', KEYS[1]) " +
-            "else " +
-            "   return 0 " +
-            "end";
+    // ==================== LOCK FACTORY ====================
 
-    /** Pre-compiled Lua script object để tránh tạo mới mỗi lần unlock */
-    private static final DefaultRedisScript<Long> UNLOCK_SCRIPT_OBJECT = createUnlockScript();
-
-    private static DefaultRedisScript<Long> createUnlockScript() {
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        script.setScriptText(UNLOCK_SCRIPT);
-        script.setResultType(Long.class);
-        return script;
+    /** Lấy lock instance (reentrant). */
+    public RLock getLock(String lockKey) {
+        validateLockKey(lockKey);
+        return redissonClient.getLock(lockKey);
     }
 
-    /** Khoảng thời gian retry ban đầu (50ms) */
-    private static final long DEFAULT_RETRY_INTERVAL_MS = 50;
-
-    /** Khoảng thời gian retry tối đa sau exponential backoff (500ms) */
-    private static final long MAX_RETRY_INTERVAL_MS = 500;
+    /** Lấy fair lock (FIFO ordering, chậm hơn 20-30%). */
+    public RLock getFairLock(String lockKey) {
+        validateLockKey(lockKey);
+        return redissonClient.getFairLock(lockKey);
+    }
 
     // ==================== VALIDATION ====================
 
-    /**
-     * Validate các tham số lock.
-     *
-     * @param lockKey Key của lock
-     * @param timeout Thời gian timeout
-     * @throws IllegalArgumentException nếu tham số không hợp lệ
-     */
-    private void validateLockParams(String lockKey, long timeout) {
+    private void validateLockKey(String lockKey) {
         if (lockKey == null || lockKey.isEmpty()) {
             throw new IllegalArgumentException("lockKey cannot be null or empty");
         }
-        if (timeout <= 0) {
-            throw new IllegalArgumentException("timeout must be positive");
+    }
+
+    private void validateTimeout(long timeout) {
+        if (timeout < -1) {
+            throw new IllegalArgumentException("timeout must be >= -1");
         }
     }
 
-    // ==================== LOCK OPERATIONS ====================
+    // ==================== BASIC LOCK ====================
 
-    /**
-     * Thử acquire lock một lần duy nhất (không retry).
-     * 
-     * <p>
-     * Sử dụng Redis SET NX EX command để atomic set key nếu chưa tồn tại.
-     * Lock value là UUID random để đảm bảo uniqueness và cho phép safe unlock.
-     *
-     * @param lockKey  Key dùng làm lock (ví dụ: "lock:order:123")
-     * @param timeout  Thời gian lock tồn tại (TTL) - lock sẽ tự hết hạn sau thời
-     *                 gian này
-     * @param timeUnit Đơn vị thời gian của timeout
-     * @return lockValue (UUID) nếu acquire thành công - CẦN GIỮ LẠI ĐỂ UNLOCK,
-     *         null nếu lock đang bị giữ bởi process khác hoặc có lỗi
-     * @throws IllegalArgumentException nếu lockKey null/empty hoặc timeout <= 0
-     */
-    public String tryLock(String lockKey, long timeout, TimeUnit timeUnit) {
-        validateLockParams(lockKey, timeout);
-        String lockValue = UUID.randomUUID().toString();
+    /** Thử acquire lock 1 lần (watch dog auto-renewal). */
+    public boolean tryLock(String lockKey) {
         try {
-            Boolean acquired = stringRedisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, timeout, timeUnit);
-
-            if (Boolean.TRUE.equals(acquired)) {
-                log.debug("Lock acquired: key={}", lockKey);
-                return lockValue;
-            }
-            log.debug("Lock busy: key={}", lockKey);
-            return null;
+            return getLock(lockKey).tryLock();
         } catch (Exception e) {
-            log.error("Redis lock error: key={}", lockKey, e);
-            return null;
-        }
-    }
-
-    /**
-     * Thử acquire lock với retry và exponential backoff.
-     * 
-     * <p>
-     * Method này sẽ retry nhiều lần trong khoảng maxWaitTime nếu lock đang busy.
-     * Sử dụng exponential backoff để giảm contention:
-     * <ul>
-     * <li>Lần 1: chờ 50ms</li>
-     * <li>Lần 2: chờ 100ms</li>
-     * <li>Lần 3: chờ 200ms</li>
-     * <li>... (max 500ms mỗi lần)</li>
-     * </ul>
-     *
-     * @param lockKey     Key dùng làm lock
-     * @param timeout     TTL của lock (thời gian lock tự hết hạn)
-     * @param maxWaitTime Thời gian tối đa chờ để acquire lock
-     * @param timeUnit    Đơn vị thời gian cho cả timeout và maxWaitTime
-     * @return lockValue nếu acquire thành công, null nếu hết thời gian chờ hoặc bị
-     *         interrupt
-     */
-    @SuppressWarnings("BusyWait") // Intentional: exponential backoff retry for distributed lock
-    public String tryLockWithRetry(String lockKey, long timeout, long maxWaitTime, TimeUnit timeUnit) {
-        long deadlineMs = System.currentTimeMillis() + timeUnit.toMillis(maxWaitTime);
-        long retryIntervalMs = DEFAULT_RETRY_INTERVAL_MS;
-
-        while (System.currentTimeMillis() < deadlineMs) {
-            String lockValue = tryLock(lockKey, timeout, timeUnit);
-            if (lockValue != null) {
-                return lockValue;
-            }
-
-            try {
-                Thread.sleep(retryIntervalMs);
-                // Exponential backoff với cap
-                retryIntervalMs = Math.min(retryIntervalMs * 2, MAX_RETRY_INTERVAL_MS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("Lock retry interrupted: key={}", lockKey);
-                return null;
-            }
-        }
-
-        log.warn("Lock acquisition timeout after {}ms: key={}", timeUnit.toMillis(maxWaitTime), lockKey);
-        return null;
-    }
-
-    /**
-     * Giải phóng lock một cách an toàn.
-     * 
-     * <p>
-     * Sử dụng Lua script để đảm bảo chỉ owner (process giữ lockValue gốc)
-     * mới có thể giải phóng lock. Điều này ngăn scenario:
-     * <ol>
-     * <li>Process A acquire lock</li>
-     * <li>Process A chạy quá lâu, lock hết hạn</li>
-     * <li>Process B acquire lock mới</li>
-     * <li>Process A hoàn thành và xóa lock → SAI! Đang xóa lock của B</li>
-     * </ol>
-     *
-     * @param lockKey   Key của lock cần giải phóng
-     * @param lockValue Value trả về từ tryLock - dùng để verify ownership
-     * @return true nếu unlock thành công, false nếu lock không thuộc về caller
-     *         (đã hết hạn hoặc bị chiếm bởi process khác)
-     */
-    @SuppressWarnings("UnusedReturnValue") // Return value is optional for callers
-    public boolean unlock(String lockKey, String lockValue) {
-        if (lockValue == null) {
+            log.error("Redis tryLock error: key={}", lockKey, e);
             return false;
         }
+    }
 
+    /** Thử acquire lock với TTL cố định. */
+    public boolean tryLock(String lockKey, long leaseTime, TimeUnit timeUnit) {
+        validateTimeout(leaseTime);
         try {
-            Long result = stringRedisTemplate.execute(
-                    UNLOCK_SCRIPT_OBJECT,
-                    Collections.singletonList(lockKey),
-                    lockValue);
+            return getLock(lockKey).tryLock(0, leaseTime, timeUnit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Lock interrupted: key={}", lockKey);
+            return false;
+        } catch (Exception e) {
+            log.error("Redis tryLock error: key={}", lockKey, e);
+            return false;
+        }
+    }
 
-            boolean success = result == 1L;
-            if (success) {
-                log.debug("Lock released: key={}", lockKey);
+    /** Thử acquire lock với retry. leaseTime=-1 để bật watch dog. */
+    public boolean tryLockWithRetry(String lockKey, long waitTime, long leaseTime, TimeUnit timeUnit) {
+        validateTimeout(leaseTime);
+        try {
+            boolean acquired = getLock(lockKey).tryLock(waitTime, leaseTime, timeUnit);
+            if (!acquired) {
+                log.warn("Lock timeout after {}ms: key={}", timeUnit.toMillis(waitTime), lockKey);
             }
-            return success;
+            return acquired;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Lock interrupted: key={}", lockKey);
+            return false;
+        } catch (Exception e) {
+            log.error("Redis tryLock error: key={}", lockKey, e);
+            return false;
+        }
+    }
+
+    /** Giải phóng lock. Chỉ owner thread mới unlock được. */
+    public boolean unlock(String lockKey) {
+        try {
+            RLock lock = getLock(lockKey);
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                return true;
+            }
+            log.warn("Cannot unlock - not owner: key={}", lockKey);
+            return false;
         } catch (Exception e) {
             log.error("Redis unlock error: key={}", lockKey, e);
             return false;
         }
     }
 
-    /**
-     * Thực thi action trong critical section với auto-release lock (không retry).
-     * 
-     * <p>
-     * Đây là convenient method cho executeWithLock với maxWaitTime = 0.
-     *
-     * @param <T>      Kiểu trả về của action
-     * @param lockKey  Key dùng làm lock
-     * @param timeout  TTL của lock
-     * @param timeUnit Đơn vị thời gian
-     * @param action   Supplier chứa logic cần thực thi trong critical section
-     * @return Kết quả của action
-     * @throws LockAcquisitionException nếu không thể acquire lock
-     */
-    public <T> T executeWithLock(String lockKey, long timeout, TimeUnit timeUnit,
-            Supplier<T> action) {
-        return executeWithLock(lockKey, timeout, 0, timeUnit, action);
+    /** Force unlock (NGUY HIỂM - có thể gây race condition). */
+    public boolean forceUnlock(String lockKey) {
+        try {
+            boolean result = getLock(lockKey).forceUnlock();
+            if (result)
+                log.warn("Force unlocked: key={}", lockKey);
+            return result;
+        } catch (Exception e) {
+            log.error("Redis force unlock error: key={}", lockKey, e);
+            return false;
+        }
     }
 
-    /**
-     * Thực thi action trong critical section với auto-release lock và hỗ trợ retry.
-     * 
-     * <p>
-     * Đây là method được khuyến nghị sử dụng vì đảm bảo lock luôn được release,
-     * kể cả khi có exception xảy ra.
-     * 
-     * <h3>Ví dụ:</h3>
-     * 
-     * <pre>{@code
-     * BigDecimal newBalance = redisLockComponent.executeWithLock(
-     *         "lock:wallet:" + walletId,
-     *         30, // lock TTL 30 giây
-     *         5, // chờ tối đa 5 giây để acquire lock
-     *         TimeUnit.SECONDS,
-     *         () -> {
-     *             // Critical section: update wallet balance
-     *             return walletService.deposit(walletId, amount);
-     *         });
-     * }</pre>
-     *
-     * @param <T>         Kiểu trả về của action
-     * @param lockKey     Key dùng làm lock (khuyến nghị format:
-     *                    "lock:{resource}:{id}")
-     * @param lockTimeout TTL của lock - nên lớn hơn thời gian xử lý dự kiến
-     * @param maxWaitTime Thời gian tối đa chờ acquire lock (0 = không retry)
-     * @param timeUnit    Đơn vị thời gian cho cả lockTimeout và maxWaitTime
-     * @param action      Supplier chứa logic cần thực thi trong critical section
-     * @return Kết quả trả về của action
-     * @throws LockAcquisitionException nếu không thể acquire lock trong thời gian
-     *                                  cho phép
-     * @throws RuntimeException         nếu action throw exception (lock vẫn được
-     *                                  release)
-     */
-    public <T> T executeWithLock(String lockKey, long lockTimeout, long maxWaitTime,
-            TimeUnit timeUnit, Supplier<T> action) {
-        String lockValue = maxWaitTime > 0
-                ? tryLockWithRetry(lockKey, lockTimeout, maxWaitTime, timeUnit)
-                : tryLock(lockKey, lockTimeout, timeUnit);
+    // ==================== HIGH-LEVEL API ====================
 
-        if (lockValue == null) {
-            throw new LockAcquisitionException("Cannot acquire lock: " + lockKey);
+    /** Execute với lock (watch dog auto-renewal). */
+    public <T> T executeWithLock(String lockKey, Supplier<T> action) {
+        RLock lock = getLock(lockKey);
+        try {
+            lock.lock();
+            return action.get();
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
         }
+    }
+
+    /** Execute với lock có TTL cố định. */
+    public <T> T executeWithLock(String lockKey, long leaseTime, TimeUnit timeUnit, Supplier<T> action) {
+        return executeWithLock(lockKey, 0, leaseTime, timeUnit, action);
+    }
+
+    /** Execute với retry. leaseTime=-1 để bật watch dog. */
+    public <T> T executeWithLock(String lockKey, long waitTime, long leaseTime,
+            TimeUnit timeUnit, Supplier<T> action) {
+        validateTimeout(leaseTime);
+        RLock lock = getLock(lockKey);
+        boolean acquired = false;
 
         try {
+            acquired = lock.tryLock(waitTime, leaseTime, timeUnit);
+            if (!acquired) {
+                throw new LockAcquisitionException("Cannot acquire lock: " + lockKey);
+            }
             return action.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LockAcquisitionException("Lock interrupted: " + lockKey);
+        } catch (LockAcquisitionException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Action failed while holding lock: key={}", lockKey, e);
+            log.error("Action failed: key={}", lockKey, e);
             throw e;
         } finally {
-            unlock(lockKey, lockValue);
+            if (acquired && lock.isHeldByCurrentThread())
+                lock.unlock();
         }
     }
 
-    /**
-     * Thực thi action void trong critical section với auto-release lock.
-     * 
-     * <p>
-     * Version cho các action không cần return value.
-     *
-     * @param lockKey     Key dùng làm lock
-     * @param lockTimeout TTL của lock
-     * @param maxWaitTime Thời gian tối đa chờ acquire lock (0 = không retry)
-     * @param timeUnit    Đơn vị thời gian
-     * @param action      Runnable chứa logic cần thực thi
-     * @throws LockAcquisitionException nếu không thể acquire lock
-     */
-    public void executeWithLock(String lockKey, long lockTimeout, long maxWaitTime,
+    /** Execute void action với lock. */
+    public void executeWithLock(String lockKey, long waitTime, long leaseTime,
             TimeUnit timeUnit, Runnable action) {
-        executeWithLock(lockKey, lockTimeout, maxWaitTime, timeUnit, () -> {
+        executeWithLock(lockKey, waitTime, leaseTime, timeUnit, () -> {
             action.run();
             return null;
         });
     }
 
-    /**
-     * Kiểm tra xem một key có đang bị lock hay không.
-     * 
-     * <p>
-     * <b>Lưu ý:</b> Kết quả của method này có thể stale ngay lập tức
-     * (lock có thể được acquire/release bởi process khác ngay sau khi check).
-     * Chỉ nên dùng cho mục đích monitoring/debugging, KHÔNG dùng để ra quyết định
-     * logic.
-     *
-     * @param lockKey Key cần kiểm tra
-     * @return true nếu key tồn tại (đang bị lock), false nếu không hoặc có lỗi
-     */
+    // ==================== UTILITY ====================
+
+    /** Kiểm tra lock đang bị giữ. */
     public boolean isLocked(String lockKey) {
         try {
-            return stringRedisTemplate.hasKey(lockKey);
+            return getLock(lockKey).isLocked();
         } catch (Exception e) {
-            log.error("Redis check lock error: key={}", lockKey, e);
+            log.error("Check lock error: key={}", lockKey, e);
             return false;
         }
     }
 
-    // ==================== Exception ====================
+    /** Kiểm tra thread hiện tại có giữ lock không. */
+    public boolean isHeldByCurrentThread(String lockKey) {
+        try {
+            return getLock(lockKey).isHeldByCurrentThread();
+        } catch (Exception e) {
+            log.error("Check holder error: key={}", lockKey, e);
+            return false;
+        }
+    }
 
-    /**
-     * Exception được throw khi không thể acquire lock trong thời gian cho phép.
-     * 
-     * <p>
-     * Có thể xảy ra khi:
-     * <ul>
-     * <li>Lock đang bị giữ bởi process khác và hết thời gian chờ</li>
-     * <li>Redis không khả dụng</li>
-     * <li>Thread bị interrupt trong khi chờ</li>
-     * </ul>
-     */
+    /** Lấy số lần lock được acquire (reentrant counter). */
+    public int getHoldCount(String lockKey) {
+        try {
+            return getLock(lockKey).getHoldCount();
+        } catch (Exception e) {
+            log.error("Get hold count error: key={}", lockKey, e);
+            return 0;
+        }
+    }
+
+    // ==================== EXCEPTION ====================
+
+    /** Exception khi không acquire được lock. */
     public static class LockAcquisitionException extends RuntimeException {
         public LockAcquisitionException(String message) {
             super(message);
