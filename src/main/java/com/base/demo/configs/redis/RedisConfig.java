@@ -1,4 +1,4 @@
-package com.base.demo.config;
+package com.base.demo.configs.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -9,9 +9,21 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * Redis Configuration - Production-grade setup.
+ * 
+ * <p>
+ * Sử dụng Jackson2JsonRedisSerializer thay vì
+ * GenericJackson2JsonRedisSerializer:
+ * <ul>
+ * <li>Không lưu @class metadata → JSON nhỏ hơn</li>
+ * <li>Refactor-safe: đổi tên class/package không break data cũ</li>
+ * <li>Trade-off: không tự động support polymorphism</li>
+ * </ul>
+ */
 @Configuration
 public class RedisConfig {
 
@@ -31,8 +43,8 @@ public class RedisConfig {
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
 
-        // Value serialize dạng JSON
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(om);
+        // Value serialize dạng JSON (không lưu @class metadata)
+        Jackson2JsonRedisSerializer<Object> jsonSerializer = new Jackson2JsonRedisSerializer<>(om, Object.class);
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
 
@@ -41,8 +53,10 @@ public class RedisConfig {
     }
 
     /**
-     * StringRedisTemplate cho Lock operations
-     * Lock cần value là plain string để Lua script so sánh chính xác
+     * StringRedisTemplate cho Lock operations.
+     * 
+     * <p>
+     * Lock cần value là plain string để Lua script so sánh chính xác.
      */
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
