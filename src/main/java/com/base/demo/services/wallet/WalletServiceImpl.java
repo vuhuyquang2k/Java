@@ -8,7 +8,7 @@ import com.base.demo.entities.Wallet;
 import com.base.demo.exceptions.ConflictException;
 import com.base.demo.exceptions.InternalServerException;
 import com.base.demo.exceptions.ResourceNotFoundException;
-import com.base.demo.exceptions.UnauthorizedException;
+import com.base.demo.helpers.OAuth2UserHelper;
 import com.base.demo.repositories.UserIdentityRepository;
 import com.base.demo.repositories.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,8 @@ public class WalletServiceImpl implements WalletService {
     private final WalletRepository walletRepository;
 
     private final UserIdentityRepository userIdentityRepository;
+
+    private final OAuth2UserHelper oAuth2UserHelper;
 
     @Override
     public void createWallet(CreateWalletRequest request) {
@@ -53,19 +55,10 @@ public class WalletServiceImpl implements WalletService {
     @Override
     public GetWalletResponse getWallet(OAuth2User principal) {
         // Lấy Google sub (provider user id)
-        String providerUserId = principal.getAttribute("sub");
-        if (providerUserId == null) {
-            log.error("Không tìm thấy sub trong OAuth2 token");
-            throw new UnauthorizedException("Phiên đăng nhập không hợp lệ");
-        }
+        String providerUserId = oAuth2UserHelper.getProviderUserId(principal);
 
         // Tìm user trong database
-        UserIdentity identity = userIdentityRepository
-                .findByProviderAndProviderUserId(UserProvider.GOOGLE, providerUserId)
-                .orElseThrow(() -> {
-                    log.error("Không tìm thấy user với provider={}, sub={}", UserProvider.GOOGLE, providerUserId);
-                    return new UnauthorizedException("Tài khoản chưa được đăng ký");
-                });
+        UserIdentity identity = oAuth2UserHelper.getUserIdentity(UserProvider.GOOGLE, providerUserId);
 
         Wallet wallet = walletRepository.findByUserId(identity.getUserId());
 
@@ -83,4 +76,5 @@ public class WalletServiceImpl implements WalletService {
 
         return walletResponse;
     }
+
 }

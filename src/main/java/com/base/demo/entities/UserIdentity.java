@@ -12,10 +12,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_identities", uniqueConstraints = {
-        @UniqueConstraint(name = "uq_one_identity_per_user", columnNames = { "user_id" }),
-        @UniqueConstraint(name = "uq_provider_uid", columnNames = { "provider", "provider_user_id" })
-})
+@Table(name = "user_identities")
 @Data
 @EntityListeners(AuditingEntityListener.class)
 public class UserIdentity {

@@ -2,6 +2,7 @@ package com.base.demo.entities;
 
 import com.base.demo.constants.enums.wallet.WalletStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -21,6 +22,7 @@ public class Wallet {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
+    @NotNull
     private Long userId;
 
     @Column(name = "balance", precision = 15, scale = 2, nullable = false)

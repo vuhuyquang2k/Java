@@ -45,28 +45,27 @@ CREATE TABLE wallet_transactions (
 CREATE TABLE deposit_requests (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID yêu cầu nạp tiền',
     user_id             BIGINT NOT NULL COMMENT 'ID user yêu cầu nạp',
-    amount              DECIMAL(15,2) NOT NULL COMMENT 'Số tiền yêu cầu nạp',
-    transfer_reference  VARCHAR(100) COMMENT 'Mã/nội dung chuyển khoản từ user',
-    bank_transaction_id VARCHAR(100) COMMENT 'Mã GD ngân hàng - admin nhập khi duyệt',
-    status              INT NOT NULL DEFAULT 1 COMMENT '1=PENDING, 2=APPROVED, 3=REJECTED, 4=CANCELLED, 5=EXPIRED',
-    idempotency_key     VARCHAR(64) COMMENT 'Client-generated unique key tránh duplicate',
+    amount              DECIMAL(15,2) NOT NULL COMMENT 'Số tiền đã chuyển khoản',
+    transaction_code VARCHAR(100) NOT NULL COMMENT 'Mã GD từ app ngân hàng/biên lai - user nhập',
+    transfer_reference  VARCHAR(100) COMMENT 'Mã tham chiếu nội bộ - server tự sinh',
+    status              INT NOT NULL DEFAULT 1 COMMENT '1=PENDING, 2=APPROVED, 3=REJECTED, 4=CANCELLED',
     ip_address          VARCHAR(45) COMMENT 'IP address của request (IPv4/IPv6)',
     user_agent          VARCHAR(500) COMMENT 'Browser/app user agent',
-    admin_note          VARCHAR(500) COMMENT 'Ghi chú của admin',
+    admin_note          VARCHAR(500) COMMENT 'Ghi chú của admin khi duyệt/từ chối',
     reject_reason       VARCHAR(255) COMMENT 'Lý do từ chối - bắt buộc khi reject',
     processed_by        BIGINT COMMENT 'ID admin xử lý',
     processed_at        TIMESTAMP NULL COMMENT 'Thời điểm xử lý',
-    expires_at          TIMESTAMP NULL COMMENT 'Thời điểm hết hạn - auto cancel nếu quá',
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm tạo yêu cầu',
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Thời điểm cập nhật',
 
-    UNIQUE KEY uq_deposit_bank_tx (bank_transaction_id),
-    UNIQUE KEY uq_deposit_idempotency (idempotency_key),
+    -- Không unique transaction_code vì mã GD từ các ngân hàng khác nhau có thể trùng
+    -- Check duplicate qua: user_id + transaction_code + status (không REJECTED/CANCELLED)
     INDEX idx_deposit_user (user_id),
     INDEX idx_deposit_status (status),
     INDEX idx_deposit_status_created (status, created_at),
-    INDEX idx_deposit_expires (status, expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Yêu cầu nạp tiền - cần admin duyệt';
+    INDEX idx_deposit_tx_code (transaction_code),
+    INDEX idx_deposit_user_tx_code (user_id, transaction_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Yêu cầu nạp tiền - user chuyển khoản trước, khai báo sau';
 
 -- ----------------------------------------------------------------------------
 
@@ -82,7 +81,6 @@ CREATE TABLE withdrawal_requests (
     account_holder      VARCHAR(100) NOT NULL COMMENT 'Tên chủ tài khoản',
     bank_transaction_id VARCHAR(100) COMMENT 'Mã GD từ ngân hàng - admin nhập khi hoàn thành',
     status              INT NOT NULL DEFAULT 1 COMMENT '1=PENDING, 2=PROCESSING, 3=COMPLETED, 4=FAILED, 5=REJECTED, 6=CANCELLED',
-    idempotency_key     VARCHAR(64) COMMENT 'Client-generated unique key',
     ip_address          VARCHAR(45) COMMENT 'IP address của request',
     user_agent          VARCHAR(500) COMMENT 'Browser/app user agent',
     admin_note          VARCHAR(500) COMMENT 'Ghi chú của admin',
@@ -92,7 +90,6 @@ CREATE TABLE withdrawal_requests (
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm tạo yêu cầu',
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Thời điểm cập nhật',
 
-    UNIQUE KEY uq_withdrawal_idempotency (idempotency_key),
     INDEX idx_withdrawal_user (user_id),
     INDEX idx_withdrawal_status (status),
     INDEX idx_withdrawal_status_created (status, created_at),
