@@ -22,7 +22,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -67,7 +66,7 @@ public class DepositRequestServiceImpl implements DepositRequestService {
 
         // Khoá giao dịch trùng lặp
         String redisKey = "app:deposit:lock:user:" + userId;
-        boolean checkRedisLock = redisLockComponent.tryLock(redisKey, 5, TimeUnit.SECONDS);
+        boolean checkRedisLock = redisLockComponent.tryLock(redisKey, 10, TimeUnit.SECONDS);
         if (!checkRedisLock) {
             log.warn("Hệ thống đang bận, vui lòng thử lại sau");
             throw new InternalServerException("Hệ thống đang bận, vui lòng thử lại sau");

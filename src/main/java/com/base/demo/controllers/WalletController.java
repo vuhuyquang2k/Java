@@ -28,7 +28,7 @@ public class WalletController {
         return ResponseEntity.ok(ApiResponse.success(walletService.getWallet(principal)));
     }
 
-    @PostMapping("/deposit-request")
+    @PostMapping("/deposit-requests")
     public ResponseEntity<ApiResponse<CreateDepositResponse>> depositRequest(@AuthenticationPrincipal OAuth2User principal, @RequestBody @Valid CreateDepositRequest request) {
         return ResponseEntity.ok(ApiResponse.success(depositRequestService.createDepositRequest(principal, request)));
     }

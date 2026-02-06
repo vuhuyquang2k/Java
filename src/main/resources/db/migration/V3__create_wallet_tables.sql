@@ -28,15 +28,14 @@ CREATE TABLE wallet_transactions (
     balance_after    DECIMAL(15,2) NOT NULL COMMENT 'Số dư sau giao dịch',
     pending_before   DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Pending balance trước GD',
     pending_after    DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Pending balance sau GD',
-    reference_type   VARCHAR(50) COMMENT 'Loại tham chiếu: DEPOSIT_REQUEST, ORDER, WITHDRAWAL_REQUEST',
-    reference_id     BIGINT COMMENT 'ID của record tham chiếu',
+    reference_id     BIGINT COMMENT 'ID của record tham chiếu (deposit_request, order, withdrawal_request tuỳ transaction_type)',
     description      VARCHAR(255) COMMENT 'Mô tả giao dịch',
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời điểm giao dịch',
 
     INDEX idx_tx_wallet (wallet_id),
     INDEX idx_tx_created (created_at),
     INDEX idx_tx_type (transaction_type),
-    INDEX idx_tx_ref (reference_type, reference_id),
+    INDEX idx_tx_ref (reference_id),
     INDEX idx_tx_wallet_created (wallet_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Log giao dịch ví - immutable audit trail';
 

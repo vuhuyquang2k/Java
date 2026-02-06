@@ -7,18 +7,18 @@ import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-public enum WalletDirection {
+public enum WalletTransactionDirection {
     CREDIT(1, "Vào ví"),
     DEBIT(2, "Ra khỏi ví");
 
     private final Integer value;
     private final String name;
 
-    public static WalletDirection fromValue(Integer value) {
+    public static WalletTransactionDirection fromValue(Integer value) {
         if (value == null) {
             return null;
         }
-        for (WalletDirection status : WalletDirection.values()) {
+        for (WalletTransactionDirection status : WalletTransactionDirection.values()) {
             if (status.getValue().equals(value)) {
                 return status;
             }
@@ -26,11 +26,11 @@ public enum WalletDirection {
         return null;
     }
 
-    public static WalletDirection fromName(String name) {
+    public static WalletTransactionDirection fromName(String name) {
         if (name == null || name.isBlank()) {
             return null;
         }
-        for (WalletDirection status : WalletDirection.values()) {
+        for (WalletTransactionDirection status : WalletTransactionDirection.values()) {
             if (status.getName().equalsIgnoreCase(name)) {
                 return status;
             }
@@ -39,15 +39,15 @@ public enum WalletDirection {
     }
 
     @Converter(autoApply = true)
-    public static class WalletDirectionConverter implements AttributeConverter<WalletDirection, Integer> {
+    public static class WalletDirectionConverter implements AttributeConverter<WalletTransactionDirection, Integer> {
         @Override
-        public Integer convertToDatabaseColumn(WalletDirection direction) {
+        public Integer convertToDatabaseColumn(WalletTransactionDirection direction) {
             return direction.getValue();
         }
 
         @Override
-        public WalletDirection convertToEntityAttribute(Integer value) {
-            return WalletDirection.fromValue(value);
+        public WalletTransactionDirection convertToEntityAttribute(Integer value) {
+            return WalletTransactionDirection.fromValue(value);
         }
     }
 }

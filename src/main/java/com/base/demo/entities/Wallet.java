@@ -35,6 +35,7 @@ public class Wallet {
     private WalletStatus status;
 
     @Column(name = "version", nullable = false)
+    @Version
     private Integer version;
 
     @Column(name = "created_at", updatable = false)
